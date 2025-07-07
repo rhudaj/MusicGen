@@ -16,5 +16,5 @@ note_lengths = {
 }
 
 import torch
-# DEVICE = torch.device("mps") if torch.backends.mps.is_available() else "cpu"
-DEVICE = 'cpu'
+# DEVICE = 'cpu'
+DEVICE = torch.device("mps") if torch.backends.mps.is_available() else "cpu"

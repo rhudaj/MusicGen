@@ -3,7 +3,7 @@ import pypianoroll as pr
 from typing import Optional
 from ..util.globals import num_pitches
 from ..util.convert import convert_pianoroll_to_piano_states
-from ..util.types import Song, PianoState
+from ..util.types import Song, PianoState, Instrument
 
 data_dir = 'data/lpd_17_cleansed'
 
@@ -51,18 +51,20 @@ def get_track_by_instrument(
 
 	return found_tracks[0]
 
-# Collect piano-roll data for specific instruments
 def get_samples(
 	songs: list[Song],
-	desired_instrument = 'Bass',
+	desired_instrument: Instrument,
 	max_samples = 100,
 ) -> list[list[PianoState]]:
+	'''
+	Collect piano-roll data for specific instruments
+	'''
 
-	dataset: list[list[PianoState]] = []
+	samples: list[list[PianoState]] = []
 
 	for song in songs:
 
-		if len(dataset) > max_samples:
+		if len(samples) >= max_samples:
 			break
 
 		try:
@@ -72,12 +74,11 @@ def get_samples(
 			continue
 
 		desired_track = get_track_by_instrument(multi_track, desired_instrument)
-
 		if desired_track:
 			# we found it
 			desired_pianoroll = desired_track.pianoroll
-			dataset.append(
+			samples.append(
 				convert_pianoroll_to_piano_states(desired_pianoroll)
 			)
 
-	return dataset
+	return samples
