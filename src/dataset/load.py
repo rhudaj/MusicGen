@@ -3,13 +3,35 @@ import pypianoroll as pr
 from typing import Optional
 from ..util.globals import num_pitches
 from ..util.convert import convert_pianoroll_to_piano_states
+from ..util.types import Song, PianoState
 
-data_dir = 'lpd_17_cleansed'
+data_dir = 'data/lpd_17_cleansed'
 
 def get_all_npz_files():
 	"""Get all .npz files from the nested directory structure"""
 	pattern = os.path.join(data_dir, "*", "*", "*", "*", "*.npz")
 	return glob.glob(pattern)
+
+def get_songs() -> list[Song]:
+	songs: list[Song] = []
+
+	# Get file data
+	filepaths = get_all_npz_files()
+	print(f'Found {len(filepaths)} total files')
+
+	# Get info on each file
+	import json
+	with open('data/midi_info.json') as f:
+		midi_info = json.load(f)
+
+	for path in filepaths:
+		id = path.split('/')[-1].split('.')[0]
+		songs.append(
+			Song(path, id, midi_info[id])
+		)
+
+	return songs
+
 
 def load_multi_track(file_path) -> pr.Multitrack:
 	return pr.load(f'{data_dir}/{file_path}')
@@ -28,3 +50,34 @@ def get_track_by_instrument(
 		return None
 
 	return found_tracks[0]
+
+# Collect piano-roll data for specific instruments
+def get_samples(
+	songs: list[Song],
+	desired_instrument = 'Bass',
+	max_samples = 100,
+) -> list[list[PianoState]]:
+
+	dataset: list[list[PianoState]] = []
+
+	for song in songs:
+
+		if len(dataset) > max_samples:
+			break
+
+		try:
+			multi_track = pr.load(song.fullpath)
+		except:
+			print(f'Error loading file: {song.fullpath}')
+			continue
+
+		desired_track = get_track_by_instrument(multi_track, desired_instrument)
+
+		if desired_track:
+			# we found it
+			desired_pianoroll = desired_track.pianoroll
+			dataset.append(
+				convert_pianoroll_to_piano_states(desired_pianoroll)
+			)
+
+	return dataset

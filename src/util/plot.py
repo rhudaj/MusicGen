@@ -63,12 +63,12 @@ def plot_note_sample_probs(
 	return ax
 
 
-def plot_track(data: pr.Track, desired_instrument: str, with_bars=True):
+def plot_track(data: pr.Track, desired_instrument: str, with_bars=True, line_spacing_bars=1, start_beat=0):
 	'''
 	Wrapper for pr.plot_track that adds vertical lines for bars
  	'''
 
-	num_bars = data.pianoroll.shape[0] / beats_per_bar
+	num_bars = int(data.pianoroll.shape[0] / beats_per_bar)
 
 	# plot the track (with bars)
 	fig, ax = plt.subplots(figsize=(12, 6))
@@ -76,12 +76,12 @@ def plot_track(data: pr.Track, desired_instrument: str, with_bars=True):
 
 	# Add vertical lines for bar boundaries
 	if with_bars:
-		for bar in range(int(num_bars) + 1):
+		for bar in range(1, num_bars+1, line_spacing_bars):
 			bar_position = bar * beats_per_bar
 			ax.axvline(x=bar_position, color='red', linestyle='--', alpha=0.7, linewidth=1)
 
 	# Add labels
-	ax.set_title(f'{desired_instrument} Track - {int(num_bars)} bars')
+	ax.set_title(f'{desired_instrument} Track - {num_bars} bars')
 	ax.set_xlabel('Time (beats)')
 	plt.tight_layout()
 	plt.show()

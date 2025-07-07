@@ -39,3 +39,30 @@ When using unbatched inputs with torch.nn.RNN:
 When using batched inputs:
 - Input shape: (seq_len, batch_size, input_size)
 - Hidden shape: (num_layers, batch_size, hidden_size)
+
+
+## Batch-Training with the `PyTorch` RNN
+
+Batch processing is much more memory and compute efficient because of GPU parallelization across the batch dimension.
+
+### Difference
+
+**Non-Batched:**
+
+- Process 1 sequence at a time -> 1 loss value
+- Sum losses across all seq's in training loop (epoch).
+
+**Batched**
+
+- Process multiple sequences simultaneously (in parallel)
+- Loss function receives predictions and targets for ALL sequences at once
+- PyTorch automatically handles the aggregation based on the `reduction` parameter
+
+With `reduction='sum'`, both approaches give identical results.
+
+
+### Problem: Variable-Length Sequences
+
+Can use `torch.nn.utils.rnn.pack_sequence` on batches which handles this for you.
+
+- RNN processes the packed sequence efficiently
