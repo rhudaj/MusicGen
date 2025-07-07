@@ -1,4 +1,5 @@
 # MODEL TRAINING
+from ..util.globals import DEVICE
 from .rnn.model import MusicRNN
 import torch
 
@@ -140,57 +141,52 @@ def train(
 
 def train_step_fully_packed(
     model: MusicRNN,
-    sequences: list[torch.Tensor],
+    packed_input_batch: torch.nn.utils.rnn.PackedSequence,
+    batch_size: int,
     note_criterion: torch.nn.CrossEntropyLoss,
     duration_criterion: torch.nn.MSELoss,
     optimizer: torch.optim.Optimizer,
+    clip_grads = True,
+    max_norm: float = 1.0,
 ):
-    """Version that keeps everything packed for maximum efficiency"""
+    """Simplified version that works with pre-packed batches from dataloader"""
     optimizer.zero_grad()
-
-    batch_size = len(sequences)
-
-    # Create input/target pairs
-    inputs = [ seq[:-1].float() for seq in sequences ]
-    targets = [ seq[1:] for seq in sequences ]
-
-    # Sort by length (makes pack_sequence more efficient)
-    # Keep track of original order for target alignment
-    paired = list(zip(inputs, targets))
-    paired.sort(key=lambda x: len(x[0]), reverse=True)
-    sorted_inputs, sorted_targets = zip(*paired)
-
-    # Pack sequences (combine variable-length sequences into a single tensor with batch size info)
-    packed_inputs = torch.nn.utils.rnn.pack_sequence(sorted_inputs, enforce_sorted=True)
-    packed_targets = torch.nn.utils.rnn.pack_sequence(sorted_targets, enforce_sorted=True)
 
     # Initialize hidden state
     hidden = model.init_hidden(batch_size)
 
     # Forward pass
-    packed_note_logits, packed_duration_pred, _ = model(packed_inputs, hidden)
+    packed_note_logits, packed_duration_pred, _ = model(packed_input_batch, hidden)
 
-    # Compute losses directly on packed data
-    note_logits_data = packed_note_logits.data
-    duration_pred_data = packed_duration_pred.data
-    target_notes = packed_targets.data[:, 0].long()
-    target_durations = packed_targets.data[:, 1:2].float()
+    # Create targets from inputs (shift by one timestep)
+    # For packed sequences, we need to shift the data portion
+    input_data = packed_input_batch.data[1:]  # Remove first timestep
+    target_notes = input_data[:, 0].long()
+    target_durations = input_data[:, 1:2].float()
 
-    note_loss = note_criterion(note_logits_data, target_notes)
-    duration_loss = duration_criterion(duration_pred_data, target_durations)
+    # Predictions exclude the last timestep (can't predict beyond sequence end)
+    pred_note_logits = packed_note_logits.data[:-1]
+    pred_durations = packed_duration_pred.data[:-1]
+
+    note_loss = note_criterion(pred_note_logits, target_notes)
+    duration_loss = duration_criterion(pred_durations, target_durations)
 
     total_loss = note_loss + duration_loss
     total_loss.backward()
+
+    if clip_grads:
+        # WHY? RNN/LSTM prone to exploding gradients, Allows higher learning rates, More stable training
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_norm)
+
     optimizer.step()
 
     return total_loss.item()
 
 def train_batched(
     model: MusicRNN,
-    sequences: list[torch.Tensor],
-    batch_size=32,
-    num_epochs=1000,
-    lr=0.001,
+    dataloader: torch.utils.data.DataLoader,
+    num_epochs: int = 1000,
+    lr: float = 0.001,
 ):
     model.train()
 
@@ -198,18 +194,23 @@ def train_batched(
     duration_criterion = torch.nn.MSELoss(reduction='sum')
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
+    print(f"Training on data set with n = {len(dataloader)}")
+
     epoch_losses = []
 
     for epoch in range(num_epochs):
+
         epoch_loss = 0
 
-        # Create batches
-        for i in range(0, len(sequences), batch_size):
-            batch = sequences[i:i + batch_size]
+        # Serve batches of training data:
+        for i, (packed_batch, batch_size) in enumerate(dataloader, 0):
+
+            packed_batch = packed_batch.to(DEVICE)
 
             loss = train_step_fully_packed(
                 model,
-                batch,
+                packed_batch,
+                batch_size,
                 note_criterion,
                 duration_criterion,
                 optimizer
@@ -220,5 +221,8 @@ def train_batched(
 
         # if epoch % (num_epochs // 100) == 0:
         print(f'Epoch {epoch}/{num_epochs}, Loss = {epoch_loss:.4f}')
+
+        # EMPTY CACHE BETWEEN EPOCHS (PERFORMANCE BOOST)!
+        torch.mps.empty_cache()
 
     return epoch_losses

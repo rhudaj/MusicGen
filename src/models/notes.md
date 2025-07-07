@@ -66,3 +66,63 @@ With `reduction='sum'`, both approaches give identical results.
 Can use `torch.nn.utils.rnn.pack_sequence` on batches which handles this for you.
 
 - RNN processes the packed sequence efficiently
+
+
+## About `PackedSequence`
+
+A `PackedSequence` is PyTorch's efficient way to handle variable-length sequences in RNNs.
+
+The problem: RNNs expect fixed-size tensors, but sequences have different lengths. Padding with zeros wastes computation.
+
+The solution: PackedSequence contains:
+
+- `data`: All sequence elements concatenated into one tensor
+- `batch_sizes`: How many sequences are active at each timestep
+
+The RNN processes `packed.data` sequentially, using `batch_sizes` to know when sequences end.
+
+**Example:**
+
+```python
+# 3 sequences: [1,2,3], [4,5], [6]
+sequences = [
+    torch.tensor([1, 2, 3]),
+    torch.tensor([4, 5]),
+    torch.tensor([6])
+]
+
+packed = pack_sequence(sequences, enforce_sorted=True)
+# packed.data = [1, 4, 6, 2, 5, 3]  # concatenated
+# packed.batch_sizes = [3, 2, 1]    # 3 active, then 2, then 1
+```
+
+## Gradient Clipping
+
+Prevents exploding gradients by capping their magnitude.
+
+```python
+# In your train_step_fully_packed function, after backward() but before step():
+total_loss.backward()
+torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # Add this line
+optimizer.step()
+```
+
+**max-norm**
+
+`max_norm=X`
+	- Scales down gradients if their total magnitude exceeds `X`
+		- Exceeds => All gradients get multiplied by `1/X`
+		- Under => Gradients pass through unchanged
+	- Keeps gradient direction, just limits size
+
+**Larger max_norm:** Allows bigger gradient steps, so the model can learn faster.
+
+- `max_norm=0.1` → tiny steps → slow learning
+- `max_norm=5.0` → bigger steps → faster learning
+
+
+**Why it helps:**
+
+- RNNs/LSTMs prone to exploding gradients
+- Allows higher learning rates
+- More stable training
