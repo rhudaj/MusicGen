@@ -32,23 +32,26 @@ trainloader = get_dataloader(dataset, 5)
 train_batched(
     model,
     trainloader,
-    num_epochs=200,
-    lr=0.001
+    num_epochs=10,
+    lr=0.01
 )
 
+# SAVE THE MODEL (for inference)
+torch.save(model.state_dict(), 'saved_models/lstm_model2.pt')
 
 # INFERENCE
-seq = dataset[0]
-predictions = sample_notes(
-    model,
-    start_event=torch.Tensor(seq[0]).to(DEVICE),
-    length=beats_per_bar*1,
-    temperature=0.3
-)
+if False:
+    seq = dataset[0]
+    predictions = sample_notes(
+        model,
+        start_event=torch.Tensor(seq[0]).to(DEVICE),
+        length=beats_per_bar*1,
+        temperature=0.3
+    )
 
-plot_note_sample_probs(predictions.note_samples)
-output_piannoroll_to_midi(
-    predictions.piano_states,
-    instrument='Guitar',
-    name='generated_guitar2'
-)
+    plot_note_sample_probs(predictions.note_samples)
+    output_piannoroll_to_midi(
+        predictions.piano_states,
+        instrument='Guitar',
+        name='generated_guitar2'
+    )

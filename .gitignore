@@ -1,4 +1,5 @@
-data/
+data/*
+saved_models/*
 
 ### macOS ###
 # General
