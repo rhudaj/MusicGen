@@ -4,62 +4,6 @@ from .rnn.model import MusicRNN
 from .lstm.model import MusicLSTM
 import torch
 
-'''
-NOTE train_step vs. `train_step_vectorized`
-
-They're mathematically identical but the vectorized version is more efficient.
-=> Vectorized is faster due to parallel computation instead of sequential loops
-
-Both do the same thing:
-
-- Forward pass: Both process the entire sequence through the RNN with proper hidden state updates
-- Loss computation: Both sum losses across all time steps
-- Gradients: Identical gradient values and backpropagation
-- Model parameters: Produce exactly the same trained model
-
-How they are different:
-
-- train_step: Python loop processing one time step at a time
-- train_step_vectorized_correct: Single vectorized operation processing all time steps at once
-'''
-
-def train_step(
-	model: MusicRNN,
-	sequence: torch.Tensor, # (seq_len, num_features)
-	note_criterion: torch.nn.CrossEntropyLoss,
-	duration_criterion: torch.nn.MSELoss,
-	optimizer: torch.optim.Adam,
-):
-	"""
-	A single step of training - trains the model on 1 sequence
-	Train with CrossEntropyLoss for note classification and MSELoss for duration regression
-	"""
-	optimizer.zero_grad()
-	hidden = model.init_hidden()
-	total_loss = 0.0
-
-	for i in range(len(sequence) - 1):
-		# Current event: [note, duration]
-		input_event = sequence[i:i+1].float()  			# Shape: (1, 2)
-		target_note = sequence[i+1, 0].long()      		# Note as integer for classification
-		target_duration = sequence[i+1, 1:2].float()  	# Duration as float for regression
-
-		# Forward pass
-		note_logits, duration_pred, hidden = model(input_event, hidden)
-
-		# Classification loss for notes
-		note_loss = note_criterion(note_logits.squeeze(0), target_note)
-
-  		# Regression loss for durations
-		duration_loss = duration_criterion(duration_pred.squeeze(0), target_duration)
-
-		# Combine losses
-		total_loss += note_loss + duration_loss
-
-	total_loss.backward()
-	optimizer.step()
-	return total_loss.item()
-
 def train_step_vectorized(
     model: MusicRNN,
     sequence: torch.Tensor,
