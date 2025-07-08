@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from ..util.types import Instrument, Song, PianoState
+from util.types import Instrument, Song, PianoState
 from .load import get_songs, get_samples
 
 class InstrumentDataset(torch.utils.data.Dataset):

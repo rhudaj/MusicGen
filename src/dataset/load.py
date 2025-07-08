@@ -1,9 +1,9 @@
 import os, glob
 import pypianoroll as pr
 from typing import Optional
-from ..util.globals import num_pitches
-from ..util.convert import convert_pianoroll_to_piano_states
-from ..util.types import Song, PianoState, Instrument
+from util.globals import num_pitches
+from util.convert import convert_pianoroll_to_piano_states
+from util.types import Song, PianoState, Instrument
 
 data_dir = 'data/lpd_17_cleansed'
 

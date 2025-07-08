@@ -1,7 +1,7 @@
 import torch
 from .rnn.model import MusicRNN
 from .rnn.model_batched import MusicRNN_Batched
-from ..util.types import PianoState, NoteSample, PianoStateSamples
+from util.types import PianoState, NoteSample, PianoStateSamples
 
 '''
 NOTE Temperature

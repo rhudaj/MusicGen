@@ -1,5 +1,5 @@
 import torch as torch
-from src.util.globals import DEVICE
+from util.globals import DEVICE
 
 class MusicRNN_Batched(torch.nn.Module):
 	def __init__(self,

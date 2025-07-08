@@ -1,5 +1,5 @@
 # MODEL TRAINING
-from ..util.globals import DEVICE
+from util.globals import DEVICE
 from .rnn.model import MusicRNN
 import torch
 
