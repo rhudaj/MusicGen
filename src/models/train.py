@@ -1,6 +1,7 @@
 # MODEL TRAINING
 from util.globals import DEVICE
 from .rnn.model import MusicRNN
+from .lstm.model import MusicLSTM
 import torch
 
 '''
@@ -140,7 +141,7 @@ def train(
 # ------------------------------------------------------------
 
 def train_step_fully_packed(
-    model: MusicRNN,
+    model: MusicLSTM,
     packed_input_batch: torch.nn.utils.rnn.PackedSequence,
     batch_size: int,
     note_criterion: torch.nn.CrossEntropyLoss,
@@ -152,11 +153,8 @@ def train_step_fully_packed(
     """Simplified version that works with pre-packed batches from dataloader"""
     optimizer.zero_grad()
 
-    # Initialize hidden state
-    hidden = model.init_hidden(batch_size)
-
     # Forward pass
-    packed_note_logits, packed_duration_pred, _ = model(packed_input_batch, hidden)
+    packed_note_logits, packed_duration_pred = model(packed_input_batch)
 
     # Create targets from inputs (shift by one timestep)
     # For packed sequences, we need to shift the data portion
@@ -184,7 +182,7 @@ def train_step_fully_packed(
     return total_loss.item()
 
 def train_batched(
-    model: MusicRNN,
+    model: MusicLSTM,
     dataloader: torch.utils.data.DataLoader,
     num_epochs: int = 1000,
     lr: float = 0.001,

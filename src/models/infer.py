@@ -1,6 +1,6 @@
 import torch
 from .rnn.model import MusicRNN
-from .rnn.model_batched import MusicRNN_Batched
+from .lstm.model import MusicLSTM
 from util.types import PianoState, NoteSample, PianoStateSamples
 
 '''
@@ -51,7 +51,7 @@ def sample_note(
 	return NoteSample(note=idx, probs=probs.numpy())
 
 def sample_notes(
-	model: MusicRNN_Batched,
+	model: MusicLSTM,
 	start_event: torch.Tensor,
 	length=20,
 	temperature=0.0,
@@ -72,15 +72,13 @@ def sample_notes(
 	)
 
 	with torch.no_grad():
-		hidden = model.init_hidden(batch_size=1)
 		current_event = start_event
-
 		for i in range(0, length):
 
 			# STEP 1: Predict next event
 			input_event = current_event.unsqueeze(0)  # add batch dimension => Shape: (1, 2)
 
-			note_logits, duration_pred, hidden = model.sample(input_event, hidden)
+			note_logits, duration_pred = model.sample(input_event)
 
 			# STEP 2: Get duration from regression
 			predicted_dur = duration_pred.squeeze(0).item()
