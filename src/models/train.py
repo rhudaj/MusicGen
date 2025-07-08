@@ -168,10 +168,11 @@ def train_step_fully_packed(
     pred_note_logits = packed_note_logits.data[:-1]
     pred_durations = packed_duration_pred.data[:-1]
 
+    # Compute totalloss
     note_loss = note_criterion(pred_note_logits, target_notes)
     duration_loss = duration_criterion(pred_durations, target_durations)
-
     total_loss = note_loss + duration_loss
+
     total_loss.backward()
 
     if clip_grads:

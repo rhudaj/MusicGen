@@ -14,6 +14,7 @@ model = MusicLSTM(
     hidden_size=256,
     num_pitches=num_pitches+1,  # 0-128 notes (including silence at 0)
     num_layers=2,
+    bidirectional=True,
     dropout=0.1
 ).to(DEVICE)
 

@@ -1,4 +1,5 @@
 import torch as torch
+from torch.nn.utils.rnn import PackedSequence
 from util.globals import DEVICE
 
 class MusicLSTM(torch.nn.Module):
@@ -8,6 +9,7 @@ class MusicLSTM(torch.nn.Module):
 		num_pitches=129,
 		dropout=0,
 		num_layers=1,
+		bidirectional=False,
 	):
 		super().__init__()
 
@@ -15,6 +17,8 @@ class MusicLSTM(torch.nn.Module):
 		self.num_pitches = num_pitches
 
 		self.num_layers = num_layers
+
+		self.D = 2 if bidirectional else 1
 
 		# Input: [note_value, duration] - just 2 numbers!
 		self.rnn = torch.nn.LSTM(
@@ -24,33 +28,38 @@ class MusicLSTM(torch.nn.Module):
 			bias=False,
 			batch_first=True,
 			dropout=dropout,
+			bidirectional=bidirectional
 		)
 
-		# Separate heads for note classification and duration regression
+		# SEPERATE HEADS:
 
-		# 1. Classification: outputs logits for each note
-		self.note_head = torch.nn.Linear(hidden_size, num_pitches)
+		# 1. Note Classification: outputs logits for each note
+		self.note_head = torch.nn.Linear(self.D * hidden_size, num_pitches)
 
-		# 2. Regression: outputs single duration value
-		self.duration_head = torch.nn.Linear(hidden_size, 1)
+		# 2. DurationRegression: outputs single duration value
+		self.duration_head = torch.nn.Linear(self.D * hidden_size, 1)
 
-	def forward(self, packed_input, hidden_state):
-		# packed_input is already a PackedSequence
-		packed_output, hidden_state = self.rnn(packed_input, hidden_state)
+	def forward(self, packed_input: PackedSequence, input_states: tuple):
+
+		output_packed, output_states = self.rnn(packed_input, input_states)
+
+		# `output_packed.data`` shape: (total_elements, D * hidden_size)
+  		# NOTE: `total_elements` = sum of all sequence lengths in the batch
 
 		# Apply output heads directly to packed data
-		note_logits = self.note_head(packed_output.data)  # Shape: (total_elements, num_pitches)
-		duration_pred = self.duration_head(packed_output.data)  # Shape: (total_elements, 1)
+		note_logits = self.note_head(output_packed.data)  		# Shape: (total_elements, num_pitches)
+		duration_pred = self.duration_head(output_packed.data)  # Shape: (total_elements, 1)
 
 		# Return packed results for easy handling
-		packed_note_logits = torch.nn.utils.rnn.PackedSequence(
-			note_logits, packed_output.batch_sizes
-		)
-		packed_duration_pred = torch.nn.utils.rnn.PackedSequence(
-			duration_pred, packed_output.batch_sizes
+		packed_note_logits = PackedSequence(
+			note_logits, output_packed.batch_sizes
 		)
 
-		return packed_note_logits, packed_duration_pred, hidden_state
+		packed_duration_pred = PackedSequence(
+			duration_pred, output_packed.batch_sizes
+		)
+
+		return packed_note_logits, packed_duration_pred, output_states
 
 	def sample(self, x: torch.Tensor, hidden_state: tuple[torch.Tensor, torch.Tensor]=None):
 		'''
@@ -71,6 +80,10 @@ class MusicLSTM(torch.nn.Module):
 		return note_logits, duration_pred, hidden_state
 
 	def init_hidden(self, batch_size: int = 1):
-		hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=DEVICE)
-		cell_state = torch.zeros(self.num_layers, batch_size, self.hidden_size, device=DEVICE)
-		return (hidden, cell_state)
+		'''
+		Creates the initial hidden state & cell state.
+
+		Returns: tuple of Tensor's (hidden, cell state)
+  		'''
+		size = (self.D * self.num_layers, batch_size, self.hidden_size)
+		return torch.zeros(*size, device=DEVICE),  torch.zeros(*size, device=DEVICE)

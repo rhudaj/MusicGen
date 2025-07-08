@@ -27,7 +27,7 @@ parameters:
  	hidden_size - number of features in the hidden state h
 	num_layers - Number of recurrent layers
 
-# inputs:
+inputs:
 	input - Tensor of shape (L, H_in) for unbatches input
 	hx - Tensor of shape (D * num_layers * H_out)
 		(Defaults to zeros if not provided)
@@ -126,3 +126,25 @@ optimizer.step()
 - RNNs/LSTMs prone to exploding gradients
 - Allows higher learning rates
 - More stable training
+
+## Bidirectional
+
+Creates 2 sets of states, one for each of the forward & reverse directions.
+
+The hidden/cell-state size will now grow:
+
+```
+(self.num_layers, batch_size, self.hidden_size)
+-->
+(2 * self.num_layers, batch_size, self.hidden_size)
+```
+
+The outputs of the RNN/LSTM change:
+
+```
+output, output_states = self.rnn(packed_input, input_states)
+```
+
+- `output`: will contain a concat of the forward & reverse hidden states at each time step in the sequence.
+- `states[0]` (h_n) will contain a concat of the final forward and reverse hidden states, respectively.
+- `states[1]` (c_n) will contain a concat of the final forward and reverse hidden states, respectively.
