@@ -1,20 +1,43 @@
 import numpy as np
+
 from matplotlib import pyplot as plt
+from matplotlib.ticker import MultipleLocator
+
 import pypianoroll as pr
 
 from .types import PianoState, NoteSample
 from .convert import convert_states_to_pianoroll
-from .globals import beats_per_bar
+from .globals import beats_per_bar, resolution
 
-def plot_pianoroll(pianoroll, ax = None, title=""):
+def plot_pianoroll(
+    pianoroll: np.ndarray,
+    ax = None,
+    title="",
+    tick_resolution=resolution
+):
 	'''Plot the piano sequence'''
 	if not ax:
 		_, ax = plt.subplots(1, 1, figsize=(15,8))
-	img = ax.imshow(pianoroll.T, aspect='auto', origin='lower')
+
+	img = ax.imshow(pianoroll.T,
+                 aspect='auto',
+                 origin='lower',
+                 cmap='binary',
+                 interpolation='none')
 	ax.set_title(title)
-	ax.set_xlabel('Time Steps')
+	ax.set_xlabel(f'Time (tick-resolution = {resolution/tick_resolution} beats)')
 	ax.set_ylabel('Pitch')
 	plt.colorbar(img, ax=ax)
+
+	# set the x-axis tick locator
+	ax.xaxis.set_major_locator(MultipleLocator(tick_resolution))
+
+	# Convert tick labels from time-steps to beats
+	ticks = ax.get_xticks()
+	ax.set_xticklabels([int(tick / resolution) for tick in ticks])
+
+	ax.grid(visible=True, axis='x')
+
 	return ax
 
 def plot_piano_states(

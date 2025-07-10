@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 from .types import PianoState
 from .globals import num_pitches
@@ -105,12 +106,17 @@ def convert_states_to_pianoroll(
 
 
 def output_piannoroll_to_midi(
-    piano_states: list[PianoState],
+    data: Union[np.ndarray, list[PianoState]],
     instrument: str,
     name = "output"
 ):
-
-    piannoroll = convert_states_to_pianoroll(piano_states)
+    if isinstance(data, np.ndarray):
+        # already a pianoroll
+        piannoroll = data
+    else:
+        # piano states
+        print('converting states to pianoroll')
+        piannoroll = convert_states_to_pianoroll(data)
 
     # Option 1: If your pianoroll has velocity values
     bass_track = pr.StandardTrack(
@@ -120,7 +126,7 @@ def output_piannoroll_to_midi(
         name=instrument
     )
 
-    # Otherwise, you should use pr.BinaryTrack
+    # TODO: Otherwise, you should use pr.BinaryTrack
 
     # Create tempo array
     tempo_array = np.full(piannoroll.shape[0], 120.0)

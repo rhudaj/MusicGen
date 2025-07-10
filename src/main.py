@@ -27,7 +27,6 @@ dataset = InstrumentDataset(
 )
 trainloader = get_dataloader(dataset, 5)
 
-
 # TRAINING
 train_batched(
     model,

@@ -1,4 +1,4 @@
-# Temporal resolution, 24 per beat
+# Temporal resolution – pulses per beat (1 beat = 1 quarter note)
 resolution = 24
 
 # All have 4/4 time-signature
@@ -8,11 +8,11 @@ beats_per_bar = resolution * 4
 num_pitches = 128 + 1
 
 note_lengths = {
-    'full': resolution,
-    'half': resolution//2,
+    'full': resolution*4,
+    'half': resolution*2,
     'quarter': resolution,
-    'eigth': resolution//8,
-    'sixteenth': resolution//16
+    'eigth': resolution//2,
+    'sixteenth': resolution//4
 }
 
 import torch

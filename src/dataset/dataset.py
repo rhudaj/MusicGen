@@ -17,12 +17,20 @@ class InstrumentDataset(torch.utils.data.Dataset):
 
     def __init__(self,
         instrument: Instrument,
-        max_samples: int = 100
+        max_samples: int = 100,
+        quantize=True,
+        randomize=True,
     ):
 
         # Load data from file
         self.songs = get_songs()
-        self.sequences = get_samples(self.songs, instrument, max_samples)
+        self.sequences = get_samples(
+            self.songs,
+            instrument,
+            max_samples,
+            quantize,
+            randomize=randomize
+        )
 
         print(f'Got {len(self.sequences)} total sequences for instrument "{instrument}"')
 
