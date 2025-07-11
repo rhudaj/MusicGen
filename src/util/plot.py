@@ -24,6 +24,7 @@ def plot_pianoroll(
                  origin='lower',
                  cmap='binary',
                  interpolation='none')
+
 	ax.set_title(title)
 	ax.set_xlabel(f'Time (tick-resolution = {resolution/tick_resolution} beats)')
 	ax.set_ylabel('Pitch')
